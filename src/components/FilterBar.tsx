@@ -1,11 +1,6 @@
+import { AGENT_LABEL } from '../lib/agents';
 import { AGENTS, type Filters, STATUSES } from '../lib/selectors';
 import type { FilterPatch } from '../lib/useFilters';
-
-const AGENT_LABEL: Record<(typeof AGENTS)[number], string> = {
-  dental: 'Dental front desk',
-  receptionist: 'Storage receptionist',
-  recovery: 'Revenue recovery',
-};
 
 interface Props {
   filters: Filters;

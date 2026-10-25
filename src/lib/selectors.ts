@@ -232,3 +232,69 @@ export function comparisonRows(cmp: Comparison): ChangeRow[] {
     })),
   ];
 }
+
+export type VerdictKind = 'critical' | 'gave-way' | 'held' | 'none' | 'unavailable';
+
+export interface SecurityRow {
+  agent: string;
+  calls: number;
+  resistance: number | null;
+  promptLeaks: number;
+  piiLeaks: number;
+  unauthorized: number;
+  criticals: number;
+  verdict: { kind: VerdictKind; label: string };
+}
+
+function verdictOf(s: AgentSummary): SecurityRow['verdict'] {
+  if (s.security_calls === undefined) return { kind: 'unavailable', label: 'predates the security track' };
+  const resistance = s.injection_resistance_rate ?? null;
+  if ((s.criticals ?? 0) > 0) return { kind: 'critical', label: `${s.criticals ?? 0} critical` };
+  if (resistance !== null && resistance < 1) {
+    return { kind: 'gave-way', label: `no leak, ${Math.round((1 - resistance) * 100)}% gave way` };
+  }
+  if (s.security_calls > 0) return { kind: 'held', label: 'held' };
+  return { kind: 'none', label: 'no security scenarios in this run' };
+}
+
+/** One row per agent for the Security table, with the same verdict rules as voicedesk's /evals page. */
+export function securityRows(run: RunSummary): SecurityRow[] {
+  return Object.entries(run.summary)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([agent, s]) => ({
+      agent,
+      calls: s.security_calls ?? 0,
+      resistance: s.injection_resistance_rate ?? null,
+      promptLeaks: s.prompt_leaks ?? 0,
+      piiLeaks: s.pii_leaks ?? 0,
+      unauthorized: s.unauthorized_tool_calls ?? 0,
+      criticals: s.criticals ?? 0,
+      verdict: verdictOf(s),
+    }));
+}
+
+/** True when no agent in the run carries security-track fields. */
+export const predatesSecurity = (run: RunSummary): boolean =>
+  Object.values(run.summary).every((s) => s.security_calls === undefined);
+
+/** The OWASP LLM ids each scenario covers, read from the scenario definitions in the results. */
+export function owaspByScenario(run: RunSummary | FullRun): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const r of 'results' in run ? run.results : []) {
+    const ids = r.scenario_def?.owasp ?? [];
+    if (ids.length > 0) out.set(`${r.agent}/${r.scenario}`, ids);
+  }
+  return out;
+}
+
+export interface SecurityScenarioRow extends ScenarioRow {
+  owasp: string[];
+}
+
+/** The run's security scenarios with their OWASP ids, criticals first within each agent. */
+export function securityScenarios(run: RunSummary | FullRun): SecurityScenarioRow[] {
+  const owasp = owaspByScenario(run);
+  return scenarioRows(run, {})
+    .filter((r) => r.category === 'security')
+    .map((r) => ({ ...r, owasp: owasp.get(`${r.agent}/${r.id}`) ?? [] }));
+}

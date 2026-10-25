@@ -34,7 +34,8 @@ function RunView({ run }: { run: RunSummary | FullRun }) {
         Scenarios · {formatDate(run.created)} · {run.agent_model}
       </h1>
       <p className="meta">
-        <Link to={`/runs/${run.id}/compare`}>Compare with baseline</Link>
+        <Link to={`/runs/${run.id}/compare`}>Compare with baseline</Link> ·{' '}
+        <Link to={`/runs/${run.id}/security`}>Security</Link>
       </p>
       <FilterBar filters={filters} onChange={setFilters} withStatus />
       {rows.length === 0 ? (
