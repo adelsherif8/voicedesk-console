@@ -104,3 +104,29 @@ test.describe('error handling', () => {
     await expectNoAxeViolations(page);
   });
 });
+
+test.describe('dark mode', () => {
+  test.use({ colorScheme: 'dark' });
+  for (const path of ['/', `/runs/${RUN}`, `/runs/${RUN}/compare`]) {
+    test(`has no accessibility violations on ${path}`, async ({ page }) => {
+      await page.goto(path);
+      await page.getByRole('heading', { level: 1 }).waitFor();
+      await expectNoAxeViolations(page);
+    });
+  }
+
+  test('scenario detail has no accessibility violations and no horizontal overflow', async ({ page }) => {
+    await page.goto(`/runs/${RUN}?status=failed`);
+    await page
+      .getByRole('table', { name: /scenarios/i })
+      .getByRole('link')
+      .first()
+      .click();
+    await page.getByRole('list', { name: /transcript/i }).waitFor();
+    await expectNoAxeViolations(page);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+});
