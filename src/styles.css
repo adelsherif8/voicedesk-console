@@ -337,3 +337,15 @@ h2 {
 .table-wrap {
   overflow-x: auto;
 }
+.table-wrap {
+  max-width: 100%;
+}
+.turn-text,
+.change,
+td {
+  overflow-wrap: anywhere;
+}
+.tool-call code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
