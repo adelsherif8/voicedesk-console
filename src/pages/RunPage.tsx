@@ -3,9 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import type { FullRun, RunSummary } from '../api/types';
 import { FilterBar } from '../components/FilterBar';
 import { RunNotFound } from '../components/NotFound';
+import { OwaspIds } from '../components/OwaspIds';
 import { SnapshotBoundary } from '../components/SnapshotBoundary';
 import { formatDate } from '../lib/format';
-import { OWASP_LLM } from '../lib/owasp';
 import { findRun, owaspByScenario, scenarioRows } from '../lib/selectors';
 import { useFilters } from '../lib/useFilters';
 import { TableScroll } from '../components/TableScroll';
@@ -66,15 +66,7 @@ function RunView({ run }: { run: RunSummary | FullRun }) {
                   <td>{r.agent}</td>
                   <td>
                     <Link to={`/runs/${run.id}/${r.agent}/${r.id}`}>{r.title}</Link>
-                    {(owasp.get(`${r.agent}/${r.id}`) ?? []).length > 0 && (
-                      <span className="owasp-ids">
-                        {(owasp.get(`${r.agent}/${r.id}`) ?? []).map((id) => (
-                          <abbr key={id} title={OWASP_LLM[id] ?? id} className="owasp">
-                            {id}
-                          </abbr>
-                        ))}
-                      </span>
-                    )}
+                    <OwaspIds ids={owasp.get(`${r.agent}/${r.id}`) ?? []} />
                     {r.criticals > 0 && (
                       <span className="crit badge-crit">{r.criticals} security critical</span>
                     )}

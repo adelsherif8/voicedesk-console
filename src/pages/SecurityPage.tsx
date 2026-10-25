@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import type { FullRun, RunSummary } from '../api/types';
 import { RunNotFound } from '../components/NotFound';
+import { OwaspIds } from '../components/OwaspIds';
 import { SnapshotBoundary } from '../components/SnapshotBoundary';
 import { TableScroll } from '../components/TableScroll';
 import { agentLabel } from '../lib/agents';
@@ -130,13 +131,7 @@ function SecurityView({ run }: { run: RunSummary | FullRun }) {
                         <Link to={`/runs/${run.id}/${s.agent}/${s.id}`}>{s.title}</Link>
                       </td>
                       <td>
-                        <span className="owasp-ids">
-                          {s.owasp.map((id) => (
-                            <abbr key={id} title={OWASP_LLM[id] ?? id} className="owasp">
-                              {id}
-                            </abbr>
-                          ))}
-                        </span>
+                        <OwaspIds ids={s.owasp} />
                       </td>
                       <td>
                         <span className={`status status-${s.status}`}>{s.status}</span>
