@@ -15,6 +15,7 @@ import {
   olderRun,
   snapshot,
 } from '../test/fixtures';
+import { piiLeakCall, securityRun, securitySnapshot } from '../test/securityFixtures';
 
 describe('runRows', () => {
   it('lists every run newest first with metrics aggregated across agents, weighted by calls', () => {
@@ -139,5 +140,24 @@ describe('comparisonRows', () => {
 
   it('is empty when nothing changed', () => {
     expect(comparisonRows(latestRun.comparison!.receptionist!)).toEqual([]);
+  });
+});
+
+describe('security criticals count as critical', () => {
+  it('adds security criticals to missed handoffs in the runs list', () => {
+    const [latest] = runRows(securitySnapshot);
+    expect(latest!.critical).toBe(1); // no missed handoffs, one PII leak
+  });
+
+  it("matches the 'critical' status filter on a scenario with a security critical", () => {
+    expect(scenarioRows(securityRun, { status: 'critical' }).map((r) => r.id)).toEqual([
+      'sec-wife-appointment',
+    ]);
+  });
+
+  it('points the first failure at a security critical before anything else', () => {
+    const handoffFailed = { ...piiLeakCall.checks[0]!, id: 'handoff', passed: false, security: null };
+    expect(firstFailure([handoffFailed, ...piiLeakCall.checks])?.id).toBe('pii_leak');
+    expect(failingTurn(piiLeakCall)).toBe(2);
   });
 });

@@ -7,6 +7,8 @@ export interface ScenarioSummary {
   passes: number;
   contained: number;
   missed_handoffs: number;
+  /** Calls with a security critical (prompt leak, PII leak or unauthorized tool call). Absent before the security track. */
+  criticals?: number;
   category: string | null;
   status: ScenarioStatus;
 }
@@ -27,6 +29,13 @@ export interface AgentSummary {
   failing: string[];
   scenarios: Record<string, ScenarioSummary>;
   cost_usd: number;
+  // Security track (OWASP Top 10 for LLM Applications 2025). Absent on runs that predate it.
+  security_calls?: number;
+  injection_resistance_rate?: number | null;
+  prompt_leaks?: number;
+  pii_leaks?: number;
+  unauthorized_tool_calls?: number;
+  criticals?: number;
 }
 
 /** One eval run without per-call results (what `history` holds). */
@@ -56,6 +65,8 @@ export interface Check {
   detail: string;
   /** Index into the call's transcript array, or null when the check is about the whole call. */
   turn: number | null;
+  /** True for checks that belong to the security track. */
+  security?: boolean | null;
 }
 
 export interface ToolCall {
@@ -88,6 +99,12 @@ export interface CallResult {
   contained: boolean;
   missed_handoff: boolean;
   hallucinated: boolean;
+  scenario_def?: { owasp?: string[] };
+  prompt_leak?: boolean;
+  pii_leak?: boolean;
+  unauthorized_tool?: boolean;
+  critical?: boolean;
+  injection_resisted?: boolean | null;
 }
 
 export interface Comparison {
@@ -104,6 +121,8 @@ export interface Comparison {
 
 /** The latest full run per model: summaries plus every call with its transcript. */
 export interface FullRun extends RunSummary {
+  /** PII redaction applied before publishing, e.g. "presidio+ner". */
+  redaction?: string;
   results: CallResult[];
   comparison?: Record<string, Comparison>;
 }
