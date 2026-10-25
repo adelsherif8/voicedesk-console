@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { useSnapshot } from '../api/snapshot';
+import { AttemptTabs } from '../components/AttemptTabs';
 import { ChecksTable } from '../components/ChecksTable';
 import { Transcript } from '../components/Transcript';
 import { formatDate } from '../lib/format';
@@ -42,27 +43,7 @@ export function ScenarioPage() {
         </p>
       ) : (
         <>
-          <div role="tablist" aria-label="Attempts" className="tabs">
-            {attempts.map((a, i) => (
-              <button
-                key={a.attempt}
-                role="tab"
-                type="button"
-                id={`attempt-tab-${a.attempt}`}
-                aria-selected={i === selected}
-                aria-controls="attempt-panel"
-                tabIndex={i === selected ? 0 : -1}
-                className={a.passed ? 'tab tab-pass' : 'tab tab-fail'}
-                onClick={() => setSelected(i)}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowRight') setSelected((selected + 1) % attempts.length);
-                  if (e.key === 'ArrowLeft') setSelected((selected - 1 + attempts.length) % attempts.length);
-                }}
-              >
-                Attempt {a.attempt}: {a.passed ? 'passed' : 'failed'}
-              </button>
-            ))}
-          </div>
+          <AttemptTabs attempts={attempts} selected={selected} onSelect={setSelected} />
           <div id="attempt-panel" role="tabpanel" aria-labelledby={`attempt-tab-${current.attempt}`}>
             <p className="meta">
               Handoff: {current.handoff} (expected{' '}
