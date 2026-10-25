@@ -3,14 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 
 import { type Filters, parseFilters } from './selectors';
 
+export type FilterPatch = Partial<Record<keyof Filters, string | undefined>>;
+
 /** Agent and status filters, read from and written to the query string so links carry them. */
-export function useFilters(): [
-  Filters,
-  (patch: Record<keyof Filters, string | undefined> | Partial<Record<keyof Filters, string>>) => void,
-] {
+export function useFilters(): [Filters, (patch: FilterPatch) => void] {
   const [params, setParams] = useSearchParams();
   const set = useCallback(
-    (patch: Partial<Record<keyof Filters, string | undefined>>) => {
+    (patch: FilterPatch) => {
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev);

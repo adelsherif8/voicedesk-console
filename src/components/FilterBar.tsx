@@ -1,4 +1,5 @@
 import { AGENTS, type Filters, STATUSES } from '../lib/selectors';
+import type { FilterPatch } from '../lib/useFilters';
 
 const AGENT_LABEL: Record<(typeof AGENTS)[number], string> = {
   dental: 'Dental front desk',
@@ -8,7 +9,7 @@ const AGENT_LABEL: Record<(typeof AGENTS)[number], string> = {
 
 interface Props {
   filters: Filters;
-  onChange: (patch: Partial<Record<keyof Filters, string>>) => void;
+  onChange: (patch: FilterPatch) => void;
   /** The runs list has no per-scenario status, so it hides that select. */
   withStatus?: boolean;
 }
