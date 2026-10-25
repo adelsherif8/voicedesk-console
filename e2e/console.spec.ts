@@ -2,15 +2,16 @@ import { expect, test } from '@playwright/test';
 
 import { expectNoAxeViolations } from './axe';
 
-// The fixture is voicedesk's real published snapshot: one full run for gpt-4o-mini with three agents.
-const RUN = '20261022-110136-a4a4';
+// The fixture is voicedesk's real published snapshot (voicedesk@56865f2): four runs, the latest with
+// transcripts and the security track for three agents.
+const RUN = '20261025-082056-2b8c-r';
 
 test.describe('runs list', () => {
   test('lists the published runs and has no accessibility violations', async ({ page }) => {
     await page.goto('/');
     const table = page.getByRole('table', { name: /eval runs/i });
     await expect(table).toBeVisible();
-    await expect(table.getByRole('row')).toHaveCount(3); // header + 2 runs
+    await expect(table.getByRole('row')).toHaveCount(5); // header + 4 runs
     await expect(table.getByRole('columnheader', { name: /containment/i })).toBeVisible();
     await expectNoAxeViolations(page);
   });
@@ -34,7 +35,7 @@ test.describe('runs list', () => {
       if (name.startsWith('/runs/')) break;
     }
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/runs\/20261022-/);
+    await expect(page).toHaveURL(/\/runs\/\d{8}-\d{6}-/);
     await expect(page.getByRole('heading', { name: /scenarios/i })).toBeVisible();
   });
 });
@@ -128,5 +129,59 @@ test.describe('dark mode', () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
     expect(overflow).toBeLessThanOrEqual(0);
+  });
+});
+
+test.describe('security', () => {
+  test('per-agent security table, OWASP scenarios and legend, with no accessibility violations', async ({
+    page,
+  }) => {
+    await page.goto(`/runs/${RUN}`);
+    await page.getByRole('link', { name: /^security$/i }).click();
+    const agents = page.getByRole('table', { name: /security by agent/i });
+    await expect(agents.getByRole('rowheader')).toHaveCount(3);
+    await expect(agents.getByRole('columnheader', { name: /injection resistance/i })).toBeVisible();
+    await expect(page.getByRole('table', { name: /security scenarios/i }).getByRole('row')).toHaveCount(22); // header + 21
+    for (const id of ['LLM01', 'LLM02', 'LLM06', 'LLM07', 'LLM10']) {
+      await expect(page.getByRole('list', { name: /owasp/i })).toContainText(id);
+    }
+    await expectNoAxeViolations(page);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+
+  test('a run that predates the security track says so', async ({ page }) => {
+    await page.goto('/runs/20261022-110136-a4a4/security');
+    await expect(page.getByText(/predates the security track/i)).toBeVisible();
+    await expectNoAxeViolations(page);
+  });
+
+  test('the security filter survives a reload and opens a transcript with its OWASP ids', async ({
+    page,
+  }) => {
+    await page.goto(`/runs/${RUN}`);
+    await page.getByRole('combobox', { name: /scenario type/i }).selectOption('security');
+    await expect(page).toHaveURL(/track=security/);
+    await page.reload();
+    const table = page.getByRole('table', { name: /scenarios/i });
+    await expect(table.getByRole('row')).toHaveCount(22);
+    await table
+      .getByRole('link', { name: /someone else|stranger|cancel/i })
+      .first()
+      .click();
+    await expect(page.getByText(/OWASP LLM: LLM06/)).toBeVisible();
+    await expect(page.getByRole('table', { name: /checks/i })).toBeVisible();
+    await expectNoAxeViolations(page);
+  });
+});
+
+test.describe('security in dark mode', () => {
+  test.use({ colorScheme: 'dark' });
+  test('has no accessibility violations', async ({ page }) => {
+    await page.goto(`/runs/${RUN}/security`);
+    await page.getByRole('table', { name: /security by agent/i }).waitFor();
+    await expectNoAxeViolations(page);
   });
 });
