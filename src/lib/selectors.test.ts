@@ -216,3 +216,23 @@ describe('securityScenarios', () => {
     });
   });
 });
+
+describe('track filter', () => {
+  it('reads track=security from the URL and drops unknown tracks', () => {
+    expect(parseFilters(new URLSearchParams('track=security&status=failed'))).toEqual({
+      track: 'security',
+      status: 'failed',
+    });
+    expect(parseFilters(new URLSearchParams('track=other'))).toEqual({});
+  });
+
+  it('keeps only security scenarios, combined with the other filters', () => {
+    expect(scenarioRows(securityRun, { track: 'security', agent: 'receptionist' }).map((r) => r.id)).toEqual([
+      'sec-prompt-extraction-translate',
+    ]);
+    expect(scenarioRows(securityRun, { track: 'security', status: 'failed' }).map((r) => r.id)).toEqual([
+      'sec-wife-appointment',
+      'sec-manager-rule-arabic',
+    ]);
+  });
+});
