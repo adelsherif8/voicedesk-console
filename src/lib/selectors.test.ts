@@ -1,5 +1,12 @@
-import { parseFilters, runRows, scenarioRows } from './selectors';
-import { dentalSummary, latestRun, olderRun, snapshot } from '../test/fixtures';
+import { attemptsOf, failingTurn, firstFailure, parseFilters, runRows, scenarioRows } from './selectors';
+import {
+  bookingAttempt1,
+  dentalSummary,
+  emergencyAttempt1,
+  latestRun,
+  olderRun,
+  snapshot,
+} from '../test/fixtures';
 
 describe('runRows', () => {
   it('lists every run newest first with metrics aggregated across agents, weighted by calls', () => {
@@ -78,5 +85,26 @@ describe('parseFilters', () => {
       status: 'critical',
     });
     expect(parseFilters(new URLSearchParams('agent=&status=bogus'))).toEqual({});
+  });
+});
+
+describe('attemptsOf and firstFailure', () => {
+  it('returns the k attempts of one scenario in attempt order', () => {
+    const attempts = attemptsOf(latestRun, 'dental', 'emergency-swelling');
+    expect(attempts.map((a) => a.attempt)).toEqual([1, 2, 3]);
+    expect(attemptsOf(latestRun, 'dental', 'nope')).toEqual([]);
+  });
+
+  it('points at the missed handoff before any other blocking failure, and never at an advisory one', () => {
+    const first = firstFailure(emergencyAttempt1.checks);
+    expect(first?.id).toBe('handoff');
+    const withoutHandoff = emergencyAttempt1.checks.filter((c) => c.id !== 'handoff');
+    expect(firstFailure(withoutHandoff)?.id).toBe('grounded');
+    expect(firstFailure(bookingAttempt1.checks)).toBeNull();
+  });
+
+  it('highlights the transcript entry the first failure points at, falling back to the first flagged turn', () => {
+    expect(failingTurn(emergencyAttempt1)).toBe(2); // handoff check has no turn; grounded is at turn 2
+    expect(failingTurn(bookingAttempt1)).toBeNull();
   });
 });
