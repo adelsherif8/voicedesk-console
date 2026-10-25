@@ -1,4 +1,12 @@
-import { attemptsOf, failingTurn, firstFailure, parseFilters, runRows, scenarioRows } from './selectors';
+import {
+  attemptsOf,
+  comparisonRows,
+  failingTurn,
+  firstFailure,
+  parseFilters,
+  runRows,
+  scenarioRows,
+} from './selectors';
 import {
   bookingAttempt1,
   dentalSummary,
@@ -106,5 +114,30 @@ describe('attemptsOf and firstFailure', () => {
   it('highlights the transcript entry the first failure points at, falling back to the first flagged turn', () => {
     expect(failingTurn(emergencyAttempt1)).toBe(2); // handoff check has no turn; grounded is at turn 2
     expect(failingTurn(bookingAttempt1)).toBeNull();
+  });
+});
+
+describe('comparisonRows', () => {
+  it('flattens the comparison into rows with regressions first, then warnings, improvements and new scenarios', () => {
+    const rows = comparisonRows(latestRun.comparison!.dental!);
+    expect(rows.map((r) => r.kind)).toEqual(['regression', 'regression', 'warning', 'improvement', 'new']);
+    expect(rows[0]).toEqual({
+      kind: 'regression',
+      scenario: 'emergency-swelling',
+      detail: 'passed 3/3 in baseline, now 0/3',
+      critical: false,
+    });
+    expect(rows[1]).toMatchObject({ scenario: 'emergency-swelling', critical: true });
+    expect(rows[1]!.detail).not.toContain('[critical]');
+    expect(rows[4]).toEqual({
+      kind: 'new',
+      scenario: 'new-patient-booking',
+      detail: 'not in the baseline',
+      critical: false,
+    });
+  });
+
+  it('is empty when nothing changed', () => {
+    expect(comparisonRows(latestRun.comparison!.receptionist!)).toEqual([]);
   });
 });
