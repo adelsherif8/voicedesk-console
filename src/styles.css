@@ -370,3 +370,55 @@ h2 {
 .table-wrap:focus-visible {
   outline-offset: 0;
 }
+th[scope='row'] {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.crit {
+  color: var(--fail);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.zero {
+  color: var(--muted);
+}
+.verdict {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.verdict-critical {
+  color: var(--fail);
+}
+.verdict-gave-way {
+  color: var(--flaky);
+}
+.verdict-held {
+  color: var(--pass);
+}
+.owasp-ids {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.owasp {
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  text-decoration: none;
+  cursor: help;
+}
+.legend {
+  padding-left: 1.2rem;
+  margin: 0;
+}
+td .owasp-ids,
+td .badge-crit {
+  margin-left: 0.5rem;
+}
+.badge-crit {
+  font-size: 0.75rem;
+}

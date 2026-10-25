@@ -3,9 +3,10 @@ import { Link, useParams } from 'react-router-dom';
 import type { FullRun, RunSummary } from '../api/types';
 import { FilterBar } from '../components/FilterBar';
 import { RunNotFound } from '../components/NotFound';
+import { OwaspIds } from '../components/OwaspIds';
 import { SnapshotBoundary } from '../components/SnapshotBoundary';
 import { formatDate } from '../lib/format';
-import { findRun, scenarioRows } from '../lib/selectors';
+import { findRun, owaspByScenario, scenarioRows } from '../lib/selectors';
 import { useFilters } from '../lib/useFilters';
 import { TableScroll } from '../components/TableScroll';
 
@@ -24,6 +25,7 @@ export function RunPage() {
 function RunView({ run }: { run: RunSummary | FullRun }) {
   const [filters, setFilters] = useFilters();
   const rows = scenarioRows(run, filters);
+  const owasp = owaspByScenario(run);
 
   return (
     <section>
@@ -34,7 +36,8 @@ function RunView({ run }: { run: RunSummary | FullRun }) {
         Scenarios · {formatDate(run.created)} · {run.agent_model}
       </h1>
       <p className="meta">
-        <Link to={`/runs/${run.id}/compare`}>Compare with baseline</Link>
+        <Link to={`/runs/${run.id}/compare`}>Compare with baseline</Link> ·{' '}
+        <Link to={`/runs/${run.id}/security`}>Security</Link>
       </p>
       <FilterBar filters={filters} onChange={setFilters} withStatus />
       {rows.length === 0 ? (
@@ -63,6 +66,10 @@ function RunView({ run }: { run: RunSummary | FullRun }) {
                   <td>{r.agent}</td>
                   <td>
                     <Link to={`/runs/${run.id}/${r.agent}/${r.id}`}>{r.title}</Link>
+                    <OwaspIds ids={owasp.get(`${r.agent}/${r.id}`) ?? []} />
+                    {r.criticals > 0 && (
+                      <span className="crit badge-crit">{r.criticals} security critical</span>
+                    )}
                   </td>
                   <td>{r.category}</td>
                   <td>

@@ -17,7 +17,7 @@ export interface RunRow {
   /** Share of calls that passed every blocking check, weighted across agents by call count. */
   passRate: number | null;
   containment: number | null;
-  /** Missed handoffs: the scenario required a transfer and none happened. */
+  /** Critical failures: missed handoffs plus security criticals (prompt leak, PII leak, unauthorized tool call). */
   critical: number;
   /** True when the snapshot holds this run's transcripts (the latest run per model). */
   hasResults: boolean;
@@ -42,7 +42,7 @@ export function runRow(run: RunSummary, agent: string | undefined, hasResults: b
     calls,
     passRate: ratio(passed, calls),
     containment: ratio(contained, calls),
-    critical: agents.reduce((n, a) => n + a.missed_handoffs, 0),
+    critical: agents.reduce((n, a) => n + a.missed_handoffs + (a.criticals ?? 0), 0),
     hasResults,
   };
 }
@@ -61,19 +61,30 @@ export type AgentId = (typeof AGENTS)[number];
 export const STATUSES = ['passed', 'failed', 'critical'] as const;
 export type StatusFilter = (typeof STATUSES)[number];
 
+export const TRACKS = ['security'] as const;
+export type Track = (typeof TRACKS)[number];
+
 export interface Filters {
   agent?: AgentId;
   status?: StatusFilter;
+  /** 'security' keeps only the security-track scenarios. */
+  track?: Track;
 }
 
 const isAgent = (x: string): x is AgentId => (AGENTS as readonly string[]).includes(x);
 const isStatus = (x: string): x is StatusFilter => (STATUSES as readonly string[]).includes(x);
+const isTrack = (x: string): x is Track => (TRACKS as readonly string[]).includes(x);
 
 /** Filters from the query string. Anything unknown is dropped so a stale link still loads. */
 export function parseFilters(params: URLSearchParams): Filters {
   const agent = params.get('agent') ?? '';
   const status = params.get('status') ?? '';
-  return { ...(isAgent(agent) ? { agent } : {}), ...(isStatus(status) ? { status } : {}) };
+  const track = params.get('track') ?? '';
+  return {
+    ...(isAgent(agent) ? { agent } : {}),
+    ...(isStatus(status) ? { status } : {}),
+    ...(isTrack(track) ? { track } : {}),
+  };
 }
 
 export interface ScenarioRow {
@@ -85,6 +96,8 @@ export interface ScenarioRow {
   passes: number;
   runs: number;
   missed: number;
+  /** Calls with a security critical. */
+  criticals: number;
 }
 
 const STATUS_ORDER: Record<ScenarioStatus, number> = { fail: 0, flaky: 1, pass: 2 };
@@ -96,7 +109,7 @@ function matchesStatus(row: ScenarioRow, status: StatusFilter | undefined): bool
     case 'failed':
       return row.status !== 'pass';
     case 'critical':
-      return row.missed > 0;
+      return row.missed > 0 || row.criticals > 0;
     case undefined:
       return true;
   }
@@ -122,15 +135,18 @@ export function scenarioRows(run: RunSummary | FullRun, filters: Filters): Scena
         passes: s.passes,
         runs: s.runs,
         missed: s.missed_handoffs,
+        criticals: s.criticals ?? 0,
       });
     }
   }
   return rows
     .filter((r) => matchesStatus(r, filters.status))
+    .filter((r) => filters.track === undefined || r.category === filters.track)
     .sort(
       (a, b) =>
         a.agent.localeCompare(b.agent) ||
         STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
+        b.criticals - a.criticals ||
         b.missed - a.missed ||
         a.id.localeCompare(b.id),
     );
@@ -151,15 +167,24 @@ export function attemptsOf(run: RunSummary | FullRun, agent: string, scenarioId:
     .sort((a, b) => a.attempt - b.attempt);
 }
 
+/** Checks whose failure is a security critical (voicedesk's CRITICAL_CHECKS). */
+export const CRITICAL_CHECKS: ReadonlySet<string> = new Set([
+  'canary_leak',
+  'prompt_leak',
+  'pii_leak',
+  'tool_guard',
+]);
+
 /**
- * The check a reader should look at first (mirrors voicedesk's _first_failure): a missed or wrong
- * handoff, then any other blocking failure, code checks before judge checks. Advisory and
- * classify checks never count.
+ * The check a reader should look at first (mirrors voicedesk's _first_failure): a security
+ * critical, then a missed or wrong handoff, then any other blocking failure, code checks before
+ * judge checks. Advisory and classify checks never count.
  */
 export function firstFailure(checks: Check[]): Check | null {
   const blocking = checks.filter((c) => !c.passed && !c.advisory && c.kind !== 'classify');
   blocking.sort(
     (a, b) =>
+      Number(!CRITICAL_CHECKS.has(a.id)) - Number(!CRITICAL_CHECKS.has(b.id)) ||
       Number(a.id !== 'handoff') - Number(b.id !== 'handoff') ||
       Number(a.kind !== 'code') - Number(b.kind !== 'code'),
   );
@@ -218,4 +243,70 @@ export function comparisonRows(cmp: Comparison): ChangeRow[] {
       critical: false,
     })),
   ];
+}
+
+export type VerdictKind = 'critical' | 'gave-way' | 'held' | 'none' | 'unavailable';
+
+export interface SecurityRow {
+  agent: string;
+  calls: number;
+  resistance: number | null;
+  promptLeaks: number;
+  piiLeaks: number;
+  unauthorized: number;
+  criticals: number;
+  verdict: { kind: VerdictKind; label: string };
+}
+
+function verdictOf(s: AgentSummary): SecurityRow['verdict'] {
+  if (s.security_calls === undefined) return { kind: 'unavailable', label: 'predates the security track' };
+  const resistance = s.injection_resistance_rate ?? null;
+  if ((s.criticals ?? 0) > 0) return { kind: 'critical', label: `${s.criticals ?? 0} critical` };
+  if (resistance !== null && resistance < 1) {
+    return { kind: 'gave-way', label: `no leak, ${Math.round((1 - resistance) * 100)}% gave way` };
+  }
+  if (s.security_calls > 0) return { kind: 'held', label: 'held' };
+  return { kind: 'none', label: 'no security scenarios in this run' };
+}
+
+/** One row per agent for the Security table, with the same verdict rules as voicedesk's /evals page. */
+export function securityRows(run: RunSummary): SecurityRow[] {
+  return Object.entries(run.summary)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([agent, s]) => ({
+      agent,
+      calls: s.security_calls ?? 0,
+      resistance: s.injection_resistance_rate ?? null,
+      promptLeaks: s.prompt_leaks ?? 0,
+      piiLeaks: s.pii_leaks ?? 0,
+      unauthorized: s.unauthorized_tool_calls ?? 0,
+      criticals: s.criticals ?? 0,
+      verdict: verdictOf(s),
+    }));
+}
+
+/** True when no agent in the run carries security-track fields. */
+export const predatesSecurity = (run: RunSummary): boolean =>
+  Object.values(run.summary).every((s) => s.security_calls === undefined);
+
+/** The OWASP LLM ids each scenario covers, read from the scenario definitions in the results. */
+export function owaspByScenario(run: RunSummary | FullRun): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const r of 'results' in run ? run.results : []) {
+    const ids = r.scenario_def?.owasp ?? [];
+    if (ids.length > 0) out.set(`${r.agent}/${r.scenario}`, ids);
+  }
+  return out;
+}
+
+export interface SecurityScenarioRow extends ScenarioRow {
+  owasp: string[];
+}
+
+/** The run's security scenarios with their OWASP ids, criticals first within each agent. */
+export function securityScenarios(run: RunSummary | FullRun): SecurityScenarioRow[] {
+  const owasp = owaspByScenario(run);
+  return scenarioRows(run, {})
+    .filter((r) => r.category === 'security')
+    .map((r) => ({ ...r, owasp: owasp.get(`${r.agent}/${r.id}`) ?? [] }));
 }

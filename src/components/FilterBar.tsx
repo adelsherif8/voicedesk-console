@@ -1,16 +1,11 @@
+import { AGENT_LABEL } from '../lib/agents';
 import { AGENTS, type Filters, STATUSES } from '../lib/selectors';
 import type { FilterPatch } from '../lib/useFilters';
-
-const AGENT_LABEL: Record<(typeof AGENTS)[number], string> = {
-  dental: 'Dental front desk',
-  receptionist: 'Storage receptionist',
-  recovery: 'Revenue recovery',
-};
 
 interface Props {
   filters: Filters;
   onChange: (patch: FilterPatch) => void;
-  /** The runs list has no per-scenario status, so it hides that select. */
+  /** The runs list has no per-scenario status or track, so it hides those selects. */
   withStatus?: boolean;
 }
 
@@ -38,6 +33,15 @@ export function FilterBar({ filters, onChange, withStatus = false }: Props) {
                 {s}
               </option>
             ))}
+          </select>
+        </label>
+      )}
+      {withStatus && (
+        <label>
+          Scenario type
+          <select value={filters.track ?? ''} onChange={(e) => onChange({ track: e.target.value })}>
+            <option value="">All scenarios</option>
+            <option value="security">Security only</option>
           </select>
         </label>
       )}
