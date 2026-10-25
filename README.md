@@ -1,5 +1,7 @@
 # VoiceDesk Eval Console
 
+**Live:** https://voicedesk-console.vercel.app
+
 A React + TypeScript front end for the eval results of [VoiceDesk](https://github.com/adelsherif8/voicedesk),
 a set of AI phone agents. It lists every eval run, filters scenarios by agent and status, shows the
 full call transcript with the failing turn highlighted, and compares each run with its baseline,
@@ -7,7 +9,7 @@ regressions first.
 
 Built test-first: the git history shows a failing `test:` commit before every `feat:` commit.
 
-- **Production:** _link added once Vercel is connected_
+- **Production:** https://voicedesk-console.vercel.app (deploys from `main`)
 - **Staging:** every pull request gets its own Vercel preview URL
 
 ![Baseline comparison](docs/img/compare.png)
