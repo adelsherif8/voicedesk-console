@@ -17,7 +17,7 @@ export interface RunRow {
   /** Share of calls that passed every blocking check, weighted across agents by call count. */
   passRate: number | null;
   containment: number | null;
-  /** Missed handoffs: the scenario required a transfer and none happened. */
+  /** Critical failures: missed handoffs plus security criticals (prompt leak, PII leak, unauthorized tool call). */
   critical: number;
   /** True when the snapshot holds this run's transcripts (the latest run per model). */
   hasResults: boolean;
@@ -42,7 +42,7 @@ export function runRow(run: RunSummary, agent: string | undefined, hasResults: b
     calls,
     passRate: ratio(passed, calls),
     containment: ratio(contained, calls),
-    critical: agents.reduce((n, a) => n + a.missed_handoffs, 0),
+    critical: agents.reduce((n, a) => n + a.missed_handoffs + (a.criticals ?? 0), 0),
     hasResults,
   };
 }
@@ -85,6 +85,8 @@ export interface ScenarioRow {
   passes: number;
   runs: number;
   missed: number;
+  /** Calls with a security critical. */
+  criticals: number;
 }
 
 const STATUS_ORDER: Record<ScenarioStatus, number> = { fail: 0, flaky: 1, pass: 2 };
@@ -96,7 +98,7 @@ function matchesStatus(row: ScenarioRow, status: StatusFilter | undefined): bool
     case 'failed':
       return row.status !== 'pass';
     case 'critical':
-      return row.missed > 0;
+      return row.missed > 0 || row.criticals > 0;
     case undefined:
       return true;
   }
@@ -122,6 +124,7 @@ export function scenarioRows(run: RunSummary | FullRun, filters: Filters): Scena
         passes: s.passes,
         runs: s.runs,
         missed: s.missed_handoffs,
+        criticals: s.criticals ?? 0,
       });
     }
   }
@@ -131,6 +134,7 @@ export function scenarioRows(run: RunSummary | FullRun, filters: Filters): Scena
       (a, b) =>
         a.agent.localeCompare(b.agent) ||
         STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
+        b.criticals - a.criticals ||
         b.missed - a.missed ||
         a.id.localeCompare(b.id),
     );
@@ -151,15 +155,24 @@ export function attemptsOf(run: RunSummary | FullRun, agent: string, scenarioId:
     .sort((a, b) => a.attempt - b.attempt);
 }
 
+/** Checks whose failure is a security critical (voicedesk's CRITICAL_CHECKS). */
+export const CRITICAL_CHECKS: ReadonlySet<string> = new Set([
+  'canary_leak',
+  'prompt_leak',
+  'pii_leak',
+  'tool_guard',
+]);
+
 /**
- * The check a reader should look at first (mirrors voicedesk's _first_failure): a missed or wrong
- * handoff, then any other blocking failure, code checks before judge checks. Advisory and
- * classify checks never count.
+ * The check a reader should look at first (mirrors voicedesk's _first_failure): a security
+ * critical, then a missed or wrong handoff, then any other blocking failure, code checks before
+ * judge checks. Advisory and classify checks never count.
  */
 export function firstFailure(checks: Check[]): Check | null {
   const blocking = checks.filter((c) => !c.passed && !c.advisory && c.kind !== 'classify');
   blocking.sort(
     (a, b) =>
+      Number(!CRITICAL_CHECKS.has(a.id)) - Number(!CRITICAL_CHECKS.has(b.id)) ||
       Number(a.id !== 'handoff') - Number(b.id !== 'handoff') ||
       Number(a.kind !== 'code') - Number(b.kind !== 'code'),
   );
