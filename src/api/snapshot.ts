@@ -4,7 +4,14 @@ import { EVALS_URL } from './config';
 import type { Snapshot } from './types';
 
 export async function fetchSnapshot(url: string = EVALS_URL): Promise<Snapshot> {
-  const res = await fetch(url, { headers: { Accept: 'application/json' } });
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { Accept: 'application/json' } });
+  } catch (e) {
+    throw new Error(
+      `Could not load eval results (network error: ${e instanceof Error ? e.message : String(e)})`,
+    );
+  }
   if (!res.ok) throw new Error(`Could not load eval results (HTTP ${res.status})`);
   const body: unknown = await res.json();
   if (!isSnapshot(body)) throw new Error('Eval results are not in the expected shape');

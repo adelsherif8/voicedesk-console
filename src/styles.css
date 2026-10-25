@@ -316,3 +316,24 @@ h2 {
 .change-detail {
   color: var(--muted);
 }
+.notice-error {
+  border-style: solid;
+  border-color: var(--fail);
+}
+.notice button,
+.notice-error button {
+  font: inherit;
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+.notice p:first-child {
+  margin-top: 0;
+}
+.table-wrap {
+  overflow-x: auto;
+}

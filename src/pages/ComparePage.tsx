@@ -1,7 +1,8 @@
 import { Link, useParams } from 'react-router-dom';
 
-import { useSnapshot } from '../api/snapshot';
-import type { Comparison } from '../api/types';
+import type { Comparison, FullRun, RunSummary } from '../api/types';
+import { RunNotFound } from '../components/NotFound';
+import { SnapshotBoundary } from '../components/SnapshotBoundary';
 import { formatDate, formatPct } from '../lib/format';
 import { type ChangeKind, comparisonRows, findRun } from '../lib/selectors';
 
@@ -42,10 +43,17 @@ function AgentComparison({ runId, agent, cmp }: { runId: string; agent: string; 
 
 export function ComparePage() {
   const { runId = '' } = useParams();
-  const { data } = useSnapshot();
-  if (!data) return null;
-  const run = findRun(data, runId);
-  if (!run) return null;
+  return (
+    <SnapshotBoundary>
+      {(snapshot) => {
+        const run = findRun(snapshot, runId);
+        return run ? <CompareView run={run} /> : <RunNotFound runId={runId} />;
+      }}
+    </SnapshotBoundary>
+  );
+}
+
+function CompareView({ run }: { run: RunSummary | FullRun }) {
   const comparison = 'comparison' in run ? run.comparison : undefined;
 
   return (

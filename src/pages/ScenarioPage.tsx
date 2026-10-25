@@ -1,20 +1,41 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import { useSnapshot } from '../api/snapshot';
+import type { FullRun, RunSummary } from '../api/types';
 import { AttemptTabs } from '../components/AttemptTabs';
 import { ChecksTable } from '../components/ChecksTable';
+import { RunNotFound } from '../components/NotFound';
+import { SnapshotBoundary } from '../components/SnapshotBoundary';
 import { Transcript } from '../components/Transcript';
 import { formatDate } from '../lib/format';
 import { attemptsOf, failingTurn, findRun } from '../lib/selectors';
 
 export function ScenarioPage() {
   const { runId = '', agent = '', scenarioId = '' } = useParams();
-  const { data } = useSnapshot();
+  return (
+    <SnapshotBoundary>
+      {(snapshot) => {
+        const run = findRun(snapshot, runId);
+        return run ? (
+          <ScenarioView run={run} agent={agent} scenarioId={scenarioId} />
+        ) : (
+          <RunNotFound runId={runId} />
+        );
+      }}
+    </SnapshotBoundary>
+  );
+}
+
+function ScenarioView({
+  run,
+  agent,
+  scenarioId,
+}: {
+  run: RunSummary | FullRun;
+  agent: string;
+  scenarioId: string;
+}) {
   const [selected, setSelected] = useState(0);
-  if (!data) return null;
-  const run = findRun(data, runId);
-  if (!run) return null;
   const attempts = attemptsOf(run, agent, scenarioId);
   const summary = run.summary[agent]?.scenarios[scenarioId];
   const current = attempts[selected] ?? attempts[0];
