@@ -61,19 +61,30 @@ export type AgentId = (typeof AGENTS)[number];
 export const STATUSES = ['passed', 'failed', 'critical'] as const;
 export type StatusFilter = (typeof STATUSES)[number];
 
+export const TRACKS = ['security'] as const;
+export type Track = (typeof TRACKS)[number];
+
 export interface Filters {
   agent?: AgentId;
   status?: StatusFilter;
+  /** 'security' keeps only the security-track scenarios. */
+  track?: Track;
 }
 
 const isAgent = (x: string): x is AgentId => (AGENTS as readonly string[]).includes(x);
 const isStatus = (x: string): x is StatusFilter => (STATUSES as readonly string[]).includes(x);
+const isTrack = (x: string): x is Track => (TRACKS as readonly string[]).includes(x);
 
 /** Filters from the query string. Anything unknown is dropped so a stale link still loads. */
 export function parseFilters(params: URLSearchParams): Filters {
   const agent = params.get('agent') ?? '';
   const status = params.get('status') ?? '';
-  return { ...(isAgent(agent) ? { agent } : {}), ...(isStatus(status) ? { status } : {}) };
+  const track = params.get('track') ?? '';
+  return {
+    ...(isAgent(agent) ? { agent } : {}),
+    ...(isStatus(status) ? { status } : {}),
+    ...(isTrack(track) ? { track } : {}),
+  };
 }
 
 export interface ScenarioRow {
@@ -130,6 +141,7 @@ export function scenarioRows(run: RunSummary | FullRun, filters: Filters): Scena
   }
   return rows
     .filter((r) => matchesStatus(r, filters.status))
+    .filter((r) => filters.track === undefined || r.category === filters.track)
     .sort(
       (a, b) =>
         a.agent.localeCompare(b.agent) ||

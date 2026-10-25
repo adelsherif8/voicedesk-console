@@ -5,7 +5,8 @@ import { FilterBar } from '../components/FilterBar';
 import { RunNotFound } from '../components/NotFound';
 import { SnapshotBoundary } from '../components/SnapshotBoundary';
 import { formatDate } from '../lib/format';
-import { findRun, scenarioRows } from '../lib/selectors';
+import { OWASP_LLM } from '../lib/owasp';
+import { findRun, owaspByScenario, scenarioRows } from '../lib/selectors';
 import { useFilters } from '../lib/useFilters';
 import { TableScroll } from '../components/TableScroll';
 
@@ -24,6 +25,7 @@ export function RunPage() {
 function RunView({ run }: { run: RunSummary | FullRun }) {
   const [filters, setFilters] = useFilters();
   const rows = scenarioRows(run, filters);
+  const owasp = owaspByScenario(run);
 
   return (
     <section>
@@ -64,6 +66,18 @@ function RunView({ run }: { run: RunSummary | FullRun }) {
                   <td>{r.agent}</td>
                   <td>
                     <Link to={`/runs/${run.id}/${r.agent}/${r.id}`}>{r.title}</Link>
+                    {(owasp.get(`${r.agent}/${r.id}`) ?? []).length > 0 && (
+                      <span className="owasp-ids">
+                        {(owasp.get(`${r.agent}/${r.id}`) ?? []).map((id) => (
+                          <abbr key={id} title={OWASP_LLM[id] ?? id} className="owasp">
+                            {id}
+                          </abbr>
+                        ))}
+                      </span>
+                    )}
+                    {r.criticals > 0 && (
+                      <span className="crit badge-crit">{r.criticals} security critical</span>
+                    )}
                   </td>
                   <td>{r.category}</td>
                   <td>

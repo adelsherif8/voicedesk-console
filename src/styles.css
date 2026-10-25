@@ -415,3 +415,10 @@ th[scope='row'] {
   padding-left: 1.2rem;
   margin: 0;
 }
+td .owasp-ids,
+td .badge-crit {
+  margin-left: 0.5rem;
+}
+.badge-crit {
+  font-size: 0.75rem;
+}

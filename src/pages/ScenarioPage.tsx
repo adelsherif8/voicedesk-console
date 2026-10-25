@@ -8,6 +8,7 @@ import { RunNotFound } from '../components/NotFound';
 import { SnapshotBoundary } from '../components/SnapshotBoundary';
 import { Transcript } from '../components/Transcript';
 import { formatDate } from '../lib/format';
+import { OWASP_LLM } from '../lib/owasp';
 import { attemptsOf, failingTurn, findRun } from '../lib/selectors';
 
 export function ScenarioPage() {
@@ -57,6 +58,14 @@ function ScenarioView({
         )}
       </p>
 
+      {(current?.scenario_def?.owasp ?? []).length > 0 && (
+        <p className="meta">
+          OWASP LLM:{' '}
+          {(current?.scenario_def?.owasp ?? [])
+            .map((id) => `${id} ${OWASP_LLM[id] ?? ''}`.trim())
+            .join(' · ')}
+        </p>
+      )}
       {current === undefined ? (
         <p className="notice">
           Transcripts are only published for the latest run of each model. This run keeps summary numbers
