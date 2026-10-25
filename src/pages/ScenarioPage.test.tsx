@@ -62,7 +62,8 @@ describe('scenario detail', () => {
       'true',
     );
 
-    expect(screen.getByText(/book_patient/)).toBeInTheDocument();
+    const transcript = screen.getByRole('list', { name: /transcript/i });
+    expect(within(transcript).getByText(/book_patient\(/)).toBeInTheDocument();
   });
 
   it('explains when transcripts were not published for that run', async () => {

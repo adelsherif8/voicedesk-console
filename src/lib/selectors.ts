@@ -1,4 +1,12 @@
-import type { AgentSummary, FullRun, RunSummary, ScenarioStatus, Snapshot } from '../api/types';
+import type {
+  AgentSummary,
+  CallResult,
+  Check,
+  FullRun,
+  RunSummary,
+  ScenarioStatus,
+  Snapshot,
+} from '../api/types';
 
 export interface RunRow {
   id: string;
@@ -132,4 +140,38 @@ export function findRun(snapshot: Snapshot, runId: string): RunSummary | FullRun
   return (
     Object.values(snapshot.latest).find((r) => r.id === runId) ?? snapshot.history.find((r) => r.id === runId)
   );
+}
+
+/** The k attempts of one scenario, in attempt order. Empty when the run has no transcripts. */
+export function attemptsOf(run: RunSummary | FullRun, agent: string, scenarioId: string): CallResult[] {
+  if (!('results' in run)) return [];
+  return run.results
+    .filter((r) => r.agent === agent && r.scenario === scenarioId)
+    .sort((a, b) => a.attempt - b.attempt);
+}
+
+/**
+ * The check a reader should look at first (mirrors voicedesk's _first_failure): a missed or wrong
+ * handoff, then any other blocking failure, code checks before judge checks. Advisory and
+ * classify checks never count.
+ */
+export function firstFailure(checks: Check[]): Check | null {
+  const blocking = checks.filter((c) => !c.passed && !c.advisory && c.kind !== 'classify');
+  blocking.sort(
+    (a, b) =>
+      Number(a.id !== 'handoff') - Number(b.id !== 'handoff') ||
+      Number(a.kind !== 'code') - Number(b.kind !== 'code'),
+  );
+  return blocking[0] ?? null;
+}
+
+/** Transcript index to highlight: the first failure's turn, or the first blocking failure that has one. */
+export function failingTurn(result: CallResult): number | null {
+  const first = firstFailure(result.checks);
+  if (first === null) return null;
+  if (first.turn !== null) return first.turn;
+  const located = result.checks.find(
+    (c) => !c.passed && !c.advisory && c.kind !== 'classify' && c.turn !== null,
+  );
+  return located?.turn ?? null;
 }
