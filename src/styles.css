@@ -341,11 +341,28 @@ h2 {
   max-width: 100%;
 }
 .turn-text,
-.change,
-td {
+.change {
   overflow-wrap: anywhere;
+}
+.nowrap {
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  th,
+  td {
+    padding: 0.5rem;
+  }
+  .table-wrap table {
+    min-width: 36rem;
+  }
 }
 .tool-call code {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+.reason {
+  min-width: 16rem;
+}
+.table-wrap:focus-visible {
+  outline-offset: 0;
 }

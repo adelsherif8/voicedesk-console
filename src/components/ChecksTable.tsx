@@ -1,8 +1,9 @@
 import type { Check } from '../api/types';
+import { TableScroll } from './TableScroll';
 
 export function ChecksTable({ checks }: { checks: Check[] }) {
   return (
-    <div className="table-wrap">
+    <TableScroll label="Checks">
       <table aria-label="Checks">
         <thead>
           <tr>
@@ -28,11 +29,11 @@ export function ChecksTable({ checks }: { checks: Check[] }) {
                 </span>
               </td>
               <td>{c.turn === null ? '' : `T${c.turn}`}</td>
-              <td>{c.detail}</td>
+              <td className="reason">{c.detail}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScroll>
   );
 }

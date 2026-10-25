@@ -7,6 +7,7 @@ import { SnapshotBoundary } from '../components/SnapshotBoundary';
 import { formatDate } from '../lib/format';
 import { findRun, scenarioRows } from '../lib/selectors';
 import { useFilters } from '../lib/useFilters';
+import { TableScroll } from '../components/TableScroll';
 
 export function RunPage() {
   const { runId = '' } = useParams();
@@ -44,7 +45,7 @@ function RunView({ run }: { run: RunSummary | FullRun }) {
           </button>
         </div>
       ) : (
-        <div className="table-wrap">
+        <TableScroll label="Scenarios">
           <table aria-labelledby="scenarios-heading">
             <thead>
               <tr>
@@ -75,7 +76,7 @@ function RunView({ run }: { run: RunSummary | FullRun }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       )}
     </section>
   );

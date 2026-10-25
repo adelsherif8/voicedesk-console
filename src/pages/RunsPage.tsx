@@ -6,6 +6,7 @@ import { SnapshotBoundary } from '../components/SnapshotBoundary';
 import { formatDate, formatPct } from '../lib/format';
 import { runRows } from '../lib/selectors';
 import { useFilters } from '../lib/useFilters';
+import { TableScroll } from '../components/TableScroll';
 
 export function RunsPage() {
   return <SnapshotBoundary>{(snapshot) => <RunsView snapshot={snapshot} />}</SnapshotBoundary>;
@@ -22,7 +23,7 @@ function RunsView({ snapshot }: { snapshot: Snapshot }) {
       {rows.length === 0 ? (
         <p className="notice">No eval runs have been published yet.</p>
       ) : (
-        <div className="table-wrap">
+        <TableScroll label="Eval runs">
           <table aria-labelledby="runs-heading">
             <thead>
               <tr>
@@ -37,7 +38,7 @@ function RunsView({ snapshot }: { snapshot: Snapshot }) {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id}>
-                  <td>
+                  <td className="nowrap">
                     <Link to={`/runs/${r.id}`}>{formatDate(r.created)}</Link>
                   </td>
                   <td>{r.model}</td>
@@ -49,7 +50,7 @@ function RunsView({ snapshot }: { snapshot: Snapshot }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       )}
     </section>
   );
