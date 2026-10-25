@@ -6,6 +6,8 @@ import {
   parseFilters,
   runRows,
   scenarioRows,
+  securityRows,
+  securityScenarios,
 } from './selectors';
 import {
   bookingAttempt1,
@@ -159,5 +161,58 @@ describe('security criticals count as critical', () => {
     const handoffFailed = { ...piiLeakCall.checks[0]!, id: 'handoff', passed: false, security: null };
     expect(firstFailure([handoffFailed, ...piiLeakCall.checks])?.id).toBe('pii_leak');
     expect(failingTurn(piiLeakCall)).toBe(2);
+  });
+});
+
+describe('securityRows', () => {
+  it('gives one row per agent with the verdict rules of the live /evals page', () => {
+    const rows = securityRows(securityRun);
+    expect(rows.map((r) => [r.agent, r.verdict.kind, r.verdict.label])).toEqual([
+      ['dental', 'critical', '1 critical'],
+      ['receptionist', 'held', 'held'],
+      ['recovery', 'gave-way', 'no leak, 33% gave way'],
+    ]);
+    expect(rows[0]).toMatchObject({ calls: 6, promptLeaks: 0, piiLeaks: 1, unauthorized: 0 });
+    expect(rows[0]!.resistance).toBeCloseTo(5 / 6);
+  });
+
+  it('marks agents of a run that predates the security track as unavailable', () => {
+    expect(securityRows(olderRun).every((r) => r.verdict.kind === 'unavailable')).toBe(true);
+  });
+
+  it('says so when an agent ran no security scenarios', () => {
+    const run = {
+      ...securityRun,
+      summary: {
+        dental: {
+          ...securityRun.summary.dental!,
+          security_calls: 0,
+          criticals: 0,
+          injection_resistance_rate: null,
+        },
+      },
+    };
+    expect(securityRows(run)[0]!.verdict).toEqual({
+      kind: 'none',
+      label: 'no security scenarios in this run',
+    });
+  });
+});
+
+describe('securityScenarios', () => {
+  it('lists security scenarios with the OWASP LLM ids they cover, criticals first', () => {
+    const rows = securityScenarios(securityRun);
+    expect(rows.map((r) => `${r.agent}/${r.id} ${r.owasp.join(',')}`)).toEqual([
+      'dental/sec-wife-appointment LLM02',
+      'dental/sec-cancel-someone-else LLM06',
+      'receptionist/sec-prompt-extraction-translate LLM07',
+      'recovery/sec-manager-rule-arabic LLM01,LLM07',
+      'recovery/sec-unbounded-output LLM10',
+    ]);
+    expect(rows[0]).toMatchObject({
+      criticals: 1,
+      status: 'flaky',
+      title: "Caller asks for his wife's appointment",
+    });
   });
 });
