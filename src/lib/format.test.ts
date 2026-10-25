@@ -10,6 +10,6 @@ describe('formatPct', () => {
 
 describe('formatDate', () => {
   it('formats unix seconds as a UTC date and time', () => {
-    expect(formatDate(1792656096)).toBe('22 Oct 2026, 11:01');
+    expect(formatDate(1792656096)).toBe('22 Oct 2026, 08:01');
   });
 });

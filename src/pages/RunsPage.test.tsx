@@ -12,9 +12,8 @@ describe('runs list', () => {
     expect(rows).toHaveLength(2);
 
     const latest = within(rows[0]!);
-    expect(latest.getByRole('link', { name: /22 Oct 2026, 11:01/ })).toBeInTheDocument();
+    expect(latest.getByRole('link', { name: /22 Oct 2026, 08:01/ })).toBeInTheDocument();
     expect(latest.getByRole('cell', { name: 'gpt-4o-mini' })).toBeInTheDocument();
-    expect(latest.getByRole('cell', { name: /67%/ })).toBeInTheDocument(); // pass rate
     expect(latest.getAllByRole('cell', { name: /67%/ })).toHaveLength(2); // pass rate and containment
     expect(latest.getByRole('cell', { name: /1 critical/ })).toBeInTheDocument();
 
