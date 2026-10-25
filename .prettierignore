@@ -1,0 +1,6 @@
+dist
+coverage
+playwright-report
+test-results
+public/fixtures
+package-lock.json
