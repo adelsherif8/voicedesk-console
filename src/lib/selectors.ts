@@ -2,6 +2,7 @@ import type {
   AgentSummary,
   CallResult,
   Check,
+  Comparison,
   FullRun,
   RunSummary,
   ScenarioStatus,
@@ -174,4 +175,47 @@ export function failingTurn(result: CallResult): number | null {
     (c) => !c.passed && !c.advisory && c.kind !== 'classify' && c.turn !== null,
   );
   return located?.turn ?? null;
+}
+
+export type ChangeKind = 'regression' | 'warning' | 'improvement' | 'new';
+
+export interface ChangeRow {
+  kind: ChangeKind;
+  scenario: string;
+  detail: string;
+  /** A missed handoff that the baseline did not have. */
+  critical: boolean;
+}
+
+const CRITICAL_TAG = ' [critical]';
+
+function changeRow(kind: ChangeKind, line: string): ChangeRow {
+  const critical = line.endsWith(CRITICAL_TAG);
+  const text = critical ? line.slice(0, -CRITICAL_TAG.length) : line;
+  const colon = text.indexOf(': ');
+  return {
+    kind,
+    scenario: colon === -1 ? text : text.slice(0, colon),
+    detail: colon === -1 ? '' : text.slice(colon + 2),
+    critical,
+  };
+}
+
+/**
+ * voicedesk's comparison as rows in the order a reader needs them: regressions (what now fails or
+ * misses a handoff), warnings (pass -> flaky), improvements, then scenarios new since the baseline.
+ * Lines arrive as "<scenario>: <detail>", with " [critical]" appended to missed-handoff regressions.
+ */
+export function comparisonRows(cmp: Comparison): ChangeRow[] {
+  return [
+    ...cmp.regressions.map((l) => changeRow('regression', l)),
+    ...cmp.warnings.map((l) => changeRow('warning', l)),
+    ...cmp.improvements.map((l) => changeRow('improvement', l)),
+    ...cmp.new.map((id) => ({
+      kind: 'new' as const,
+      scenario: id,
+      detail: 'not in the baseline',
+      critical: false,
+    })),
+  ];
 }

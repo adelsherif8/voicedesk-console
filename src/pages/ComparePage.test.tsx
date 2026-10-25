@@ -27,7 +27,7 @@ describe('baseline comparison', () => {
       expect.stringMatching(/^Improved.*off-topic-prank/),
       expect.stringMatching(/^New.*new-patient-booking/),
     ]);
-    expect(within(dental).getByRole('link', { name: /emergency-swelling/ })).toHaveAttribute(
+    expect(within(dental).getAllByRole('link', { name: /emergency-swelling/ })[0]).toHaveAttribute(
       'href',
       '/runs/20261022-110136-bbbb/dental/emergency-swelling',
     );

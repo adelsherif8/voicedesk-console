@@ -23,6 +23,9 @@ export function RunPage() {
       <h1 id="scenarios-heading">
         Scenarios · {formatDate(run.created)} · {run.agent_model}
       </h1>
+      <p className="meta">
+        <Link to={`/runs/${run.id}/compare`}>Compare with baseline</Link>
+      </p>
       <FilterBar filters={filters} onChange={setFilters} withStatus />
       <table aria-labelledby="scenarios-heading">
         <thead>
