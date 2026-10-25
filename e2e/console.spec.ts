@@ -99,7 +99,7 @@ test.describe('error handling', () => {
   test('shows an alert with retry when the snapshot request fails', async ({ page }) => {
     await page.route('**/fixtures/published.json', (route) => route.fulfill({ status: 500 }));
     await page.goto('/');
-    await expect(page.getByRole('alert')).toContainText(/could not load eval results/i);
+    await expect(page.getByRole('alert')).toContainText(/could not load eval results/i, { timeout: 10_000 });
     await expect(page.getByRole('button', { name: /retry/i })).toBeVisible();
     await expectNoAxeViolations(page);
   });

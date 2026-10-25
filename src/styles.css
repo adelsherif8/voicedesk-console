@@ -2,11 +2,11 @@
   --bg: #f6f7f9;
   --surface: #ffffff;
   --text: #16181d;
-  --muted: #5b6270;
+  --muted: #4f5664;
   --border: #dde1e7;
-  --accent: #0f8b8d;
-  --pass: #1a7f4b;
-  --flaky: #b26a00;
+  --accent: #0a6668;
+  --pass: #17703f;
+  --flaky: #8a4f00;
   --fail: #b3261e;
   --focus: #1d4ed8;
   color-scheme: light dark;
